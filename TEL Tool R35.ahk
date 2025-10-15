@@ -144,6 +144,14 @@ Global c :=
 Global Selected_Tool
 Global MainDDL_old
 
+Global SettingsIni := A_ScriptDir "\settings.ini"
+Global DefaultWorkbookPath := A_ScriptDir "\INTEL Tool List Rev2.xlsx"
+Global DatabaseSource := ""
+Global ExcelWorkbookPath := ""
+Global ActiveWorkbookPath := ""
+
+InitializeSettings()
+
 background_color := 0x00aceb                             ; fade color of text at bottom of tooltip
 text_color := 0x000000                                   ; initial color of text at bottom of tooltip
 fade := new Text_fader(text_color, background_color)
@@ -168,9 +176,11 @@ Gui, Add, Checkbox, xm+5 y154 w200 h30, Activate with shortcut key CTRL+]
 Gui, Add, Checkbox, x252 y419 w0 h0   , CheckBox
 Gui, Add, Text,     x117 y374 w40 h0  , Keyboard Shortcut:
 Gui, Add, Text,     x145 y362 w110 h30, Internal database date:
-Gui, Add, Radio,    xm+5 y354 w130 h30, Use internal database
-Gui, Add, Radio,    xm+5 y384 w240 h30, Build database from 'INTEL Tool List' Excel file
-Gui, Add, Text,     xm+21 y414 w80 h30, Browse for file
+Gui, Add, Radio,    xm+5 y354 w130 h30 vDatabaseSource_Internal gDatabaseSourceChange, Use internal database
+Gui, Add, Radio,    xm+5 y384 w240 h30 vDatabaseSource_Excel gDatabaseSourceChange, Build database from 'INTEL Tool List' Excel file
+Gui, Add, Text,     xm+21 y414 w80 h23, Excel file:
+Gui, Add, Edit,     x+5 yp-3 w165 vExcelWorkbookPath_Display +ReadOnly
+Gui, Add, Button,   x+5 yp+1 w70 h23 gBrowseForExcel vBrowseForExcelBtn, Browse...
 Gui, Add, Checkbox, xm+5 y124 w100 h30, Always on Top
 Gui, Add, Text,     xm+5 y94 w70 h30  , Transparency
 Gui, Add, Checkbox, xm+5 y254 w180 h30, Deactivate balloon with ESC key
@@ -180,6 +190,8 @@ Gui, Add, GroupBox, xm y204 w290 h120 , Balloon
 Gui, Add, GroupBox, xm y334 w290 h120 , Database
 Gui, Add, Text, xm21 y284 w250 h30    , Note: Balloon disappears after 60 seconds
 Gui, Add, Slider, x85 y90 w100 h30
+
+UpdateSettingsGuiState()
 
 ; =============== TEL INFO TOOL GUI ==================
 Margin       := 10        ; space between two group control boxes
@@ -248,9 +260,16 @@ Menu, Tray, Add, Quit, MenuSelection_Quit
 Welcome_Message := "Hi. It looks like you're running the TEL Info Tool for the first time.`nWould you like to import the 'Intel Tool List' Excel file and use that data? If not, I will use the latest data from 3/1/2022."
 
 ;OnMessage(0x200, "WM_MOUSEMOVE")	                ; show a tooltip when hovering over controls for explaining control purpose (use control name + _TT)
-Open_Workbook()                                     ; get data from Excel spreadsheet
-Import_Sheets()
-Close_Workbook()
+if (Open_Workbook())
+{
+   Import_Sheets()
+   Close_Workbook()
+}
+else
+{
+   MsgBox, 16, Workbook Missing, Unable to open the 'INTEL Tool List' workbook. The tool will close.
+   ExitApp
+}
 Make_List()                                         ; build the tool_arrays and list of tools
 populate_ddl()
 GuiControl, Enable, MainDDL     				    ; was disabled to prevent click before it builds the list
