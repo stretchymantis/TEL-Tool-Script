@@ -1,16 +1,138 @@
 
-Open_Workbook() {										                  ; copy entire worksheet into 'data' variable
-Global
-ClipSaved := ClipboardAll                                      ; Save the entire clipboard
-SetBatchLines, -1
-file2open := "C:\Users\stret\OneDrive\Autohotkey Stuff\- TEL Tool Script\INTEL Tool List Rev2.xlsx"
-xl := ComObjCreate("Excel.Application") ; init excel instance			                              ; create a handle to a new excel application
-wb := xl.Workbooks.Open(file2open, ReadOnly:=False, Notify:=False)					            ; handle to specific workbook
-wb_original := wb
-   if !FileExist(file2open)
-   Msgbox, % "The file '" %file2open% "' does not exist."   ; *** DO MORE WITH THIS ***
-clipboard :=
-; TGR401
+Open_Workbook() {                                                                                                 ; copy entire
+worksheet into 'data' variable
+   Global xl, wb, wb_original, ClipSaved, ExcelWorkbookPath, ActiveWorkbookPath
+   ClipSaved := ClipboardAll                                      ; Save the entire clipboard
+   SetBatchLines, -1
+
+   pathResult := ResolveWorkbookPath()
+   if !(IsObject(pathResult))
+   {
+      Clipboard := ClipSaved
+      return false
+   }
+
+   file2open := pathResult.Path
+   try
+   {
+      xl := ComObjCreate("Excel.Application")
+      wb := xl.Workbooks.Open(file2open, ReadOnly:=False, Notify:=False)
+   }
+   catch e
+   {
+      Clipboard := ClipSaved
+      MsgBox, 16, Excel Error, % "Failed to open '" file2open "'.`n`n" e.Message
+      return false
+   }
+
+   wb_original := wb
+   ActiveWorkbookPath := file2open
+
+   if (pathResult.Save)
+      SaveDatabaseSettings()
+
+   return true
+}
+
+ResolveWorkbookPath() {
+   global DatabaseSource, ExcelWorkbookPath, DefaultWorkbookPath
+
+   if (DatabaseSource = "excel")
+   {
+      if (ExcelWorkbookPath != "" && FileExist(ExcelWorkbookPath))
+         return { Path: ExcelWorkbookPath, Save: false }
+      return PromptForWorkbookPath(ExcelWorkbookPath)
+   }
+
+   if (DefaultWorkbookPath != "" && FileExist(DefaultWorkbookPath))
+      return { Path: DefaultWorkbookPath, Save: false }
+
+   return PromptForWorkbookPath(DefaultWorkbookPath)
+}
+
+PromptForWorkbookPath(missingPath := "") {
+   global DefaultWorkbookPath, ExcelWorkbookPath, DatabaseSource
+
+   packagedPath := DefaultWorkbookPath
+   message := "The 'INTEL Tool List' workbook could not be found at:`n" missingPath "`n`n"
+            . "Press Yes to browse for the file, No to use the packaged data, or Cancel to stop."
+   MsgBox, 3, Workbook Missing, %message%
+
+   IfMsgBox, Cancel
+      return ""
+
+   IfMsgBox, Yes
+   {
+      initial := missingPath != "" ? missingPath : ExcelWorkbookPath
+      FileSelectFile, userPath, 3, %initial%, Select the 'INTEL Tool List' workbook, Excel Documents (*.xlsx; *.xlsm; *.xls)
+      if (userPath = "")
+         return PromptForWorkbookPath("")
+      if !FileExist(userPath)
+      {
+         MsgBox, 48, Workbook Missing, The selected file could not be found.
+         return PromptForWorkbookPath(userPath)
+      }
+      ExcelWorkbookPath := userPath
+      DatabaseSource := "excel"
+      return { Path: userPath, Save: true }
+   }
+
+   if (FileExist(packagedPath))
+      return { Path: packagedPath, Save: false }
+
+   MsgBox, 16, Workbook Missing, % "The packaged workbook was not found at:`n" packagedPath
+   return ""
+}
+
+InitializeSettings() {
+   global SettingsIni, DatabaseSource, ExcelWorkbookPath, DefaultWorkbookPath
+
+   if (SettingsIni = "")
+      return
+
+   if !FileExist(SettingsIni)
+   {
+      IniWrite, excel, %SettingsIni%, Database, Source
+      IniWrite, %DefaultWorkbookPath%, %SettingsIni%, Database, ExcelPath
+   }
+
+   IniRead, dbSource, %SettingsIni%, Database, Source, excel
+   IniRead, excelPath, %SettingsIni%, Database, ExcelPath, %DefaultWorkbookPath%
+
+   if (dbSource != "internal" && dbSource != "excel")
+      dbSource := "excel"
+
+   DatabaseSource := dbSource
+   ExcelWorkbookPath := excelPath
+   if (ExcelWorkbookPath = "")
+      ExcelWorkbookPath := DefaultWorkbookPath
+}
+
+SaveDatabaseSettings() {
+   global SettingsIni, DatabaseSource, ExcelWorkbookPath
+   if (SettingsIni = "")
+      return
+   IniWrite, %DatabaseSource%, %SettingsIni%, Database, Source
+   IniWrite, %ExcelWorkbookPath%, %SettingsIni%, Database, ExcelPath
+}
+UpdateSettingsGuiState() {
+   global DatabaseSource, ExcelWorkbookPath
+   Gui, SGui:Default
+   internal := DatabaseSource = "internal" ? 1 : 0
+   excel := internal ? 0 : 1
+   GuiControl,, DatabaseSource_Internal, %internal%
+   GuiControl,, DatabaseSource_Excel, %excel%
+   GuiControl,, ExcelWorkbookPath_Display, %ExcelWorkbookPath%
+   if (excel)
+   {
+      GuiControl, Enable, ExcelWorkbookPath_Display
+      GuiControl, Enable, BrowseForExcelBtn
+   }
+   else
+   {
+      GuiControl, Disable, ExcelWorkbookPath_Display
+      GuiControl, Disable, BrowseForExcelBtn
+   }
 }
 
 Close_Workbook() {
@@ -609,7 +731,40 @@ Gui, Show
 return
 
 MenuSelection_Settings:
+   UpdateSettingsGuiState()
 Gui, SGui:Show
+return
+
+DatabaseSourceChange:
+   Gui, SGui:Submit, NoHide
+   if (DatabaseSource_Internal)
+      DatabaseSource := "internal"
+   else if (DatabaseSource_Excel)
+      DatabaseSource := "excel"
+   SaveDatabaseSettings()
+   UpdateSettingsGuiState()
+return
+
+BrowseForExcel:
+   Gui, SGui:+OwnDialogs
+   initial := ExcelWorkbookPath
+   FileSelectFile, newPath, 3, %initial%, Select the 'INTEL Tool List' workbook, Excel Documents (*.xlsx; *.xlsm; *.xls)
+   if (newPath = "")
+      return
+   if !FileExist(newPath)
+   {
+      MsgBox, 48, Workbook Missing, The selected file could not be found.
+      return
+   }
+   ExcelWorkbookPath := newPath
+   DatabaseSource := "excel"
+   SaveDatabaseSettings()
+   UpdateSettingsGuiState()
+return
+
+SGuiClose:
+SGuiEscape:
+   Gui, SGui:Hide
 return
 
 MenuSelection_About:
