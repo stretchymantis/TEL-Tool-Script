@@ -1,0 +1,37 @@
+TEL Quick Info Tool`n`n
+
+Overview`n
+The TEL Easy Info Tool is a helplful utlity`n
+that gives you quick access to a Tool's S/N`n
+or name via a ToolTip balloon or more detailed`n
+information and map via a small window.`n`n
+
+Getting Started`n
+When the program starts, a small (TEL icon) will`n
+appear in the System Tray.`n`n
+
+Quick Info Balloon`n
+To activate: Hover the cursor over a Tool Name or`n
+Tool S/N for a few seconds. A ToolTip Balloon will`n
+will appear with the Tool's S/N or name. It will`n
+follow the cursor until deactivated.`n
+To deactivate: Press 'ESC' key.`n`n
+
+Quick Info Window`n
+The Info Panel provides additional tool information.`n
+To Activate:`n
+ Method 2: Double-click the 'TEL' icon in the System Tray`n
+ Method 3: Right-click the 'TEL' icon in the System Tray and`n
+           select 'Quick Info Window'.`n
+ Method 1: Press the CTRL key quickly three times
+	Note: Pressing the shortcut open the Quick Info
+	Window where you can select a tool you want detailed`n
+	information about. Pressing the shortcut while`n
+	the Quick Info Balloon is open will close the balloon and`n
+	open the Quick Info	Window with the tool that was in`n
+	the balloon.
+	
+	
+	
+	
+	This program uses the Excel File 'INTEL Tool List.xlsx' to work. The program can utilize the database in one of two ways:
