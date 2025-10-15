@@ -1,6 +1,6 @@
 
-; copy entire worksheet into 'data' variable
-Open_Workbook() {
+Open_Workbook() {                                                                                                 ; copy entire
+worksheet into 'data' variable
    Global xl, wb, wb_original, ClipSaved, ExcelWorkbookPath, ActiveWorkbookPath
    ClipSaved := ClipboardAll                                      ; Save the entire clipboard
    SetBatchLines, -1
